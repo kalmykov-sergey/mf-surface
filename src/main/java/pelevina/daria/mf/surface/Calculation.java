@@ -9,7 +9,6 @@ import static pelevina.daria.mf.surface.CrossingFlag.*;
 
 public class Calculation {
 
-    private static final Apfloat MINUS_ONE = new Apfloat(-1);
     private Apfloat FIVE = new Apfloat(5);
     private Data data;
     private CrossingFlag flag;
@@ -217,7 +216,7 @@ public class Calculation {
     }
 
     private static Apfloat f2(Apfloat x) {
-        return ApfloatMath.sin(x).multiply(MINUS_ONE);
+        return ApfloatMath.sin(x).negate();
     }
 
 }

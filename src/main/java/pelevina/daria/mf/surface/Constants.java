@@ -2,8 +2,6 @@ package pelevina.daria.mf.surface;
 
 import org.apfloat.Apfloat;
 
-import java.math.BigDecimal;
-
 public interface Constants {
     int N = 200;
     int H_0 = 350;
