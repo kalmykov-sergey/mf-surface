@@ -14,7 +14,7 @@ public interface Constants {
     Apfloat P1 = new Apfloat(290.3761507);
     Apfloat G = new Apfloat(697.8648613);
     Apfloat Ms = new Apfloat(9.6);
-    Apfloat C = new Apfloat(0.134);
+    Apfloat C = new Apfloat(0.134123123123);
     double CONTAINER_RADIUS = 1.0;
     double CONTAINER_HEIGHT = 0.5;
 }
