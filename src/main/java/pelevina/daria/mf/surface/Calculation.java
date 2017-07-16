@@ -2,6 +2,7 @@ package pelevina.daria.mf.surface;
 
 import org.apfloat.Apfloat;
 import org.apfloat.ApfloatMath;
+import org.apfloat.Apint;
 
 import static java.lang.Math.*;
 import static pelevina.daria.mf.surface.Constants.*;
@@ -9,6 +10,7 @@ import static pelevina.daria.mf.surface.CrossingFlag.*;
 
 public class Calculation {
 
+    public static final int PRECISION = 16;
     private Data data;
     private CrossingFlag flag;
     private Apfloat initU0;
@@ -20,19 +22,19 @@ public class Calculation {
     }
 
     public CrossingFlag perform() {
-        leftBorder = new Apfloat(R);
-        rightBorder = new Apfloat(R * 5);
+        leftBorder = new Apfloat(Constants.left, PRECISION);
+        rightBorder = new Apfloat(Constants.right, PRECISION);
         flag = NoCrossing;
         flag = oneShot();
         return flag;
     }
 
     public CrossingFlag next() {
+        flag = oneShot();
         if (shootFinished()) {
             System.out.println("Here must be volume calc...");
             return null;
         }
-        flag = oneShot();
         return flag;
     }
 
@@ -49,6 +51,7 @@ public class Calculation {
                 } else {
                     return true;
                 }
+                break;
             case ClockWise:
             case SphereCrossing:
             case BottomCrossing:
@@ -71,9 +74,13 @@ public class Calculation {
 
     private CrossingFlag oneShot() {
         initU0 = leftBorder.add(rightBorder).divide(new Apfloat(2));
-        System.out.println("=====================");
+        System.out.println("==== calculation started ======");
         System.out.println("left = " + leftBorder);
         System.out.println("right = " + rightBorder);
+        if(leftBorder.equals(rightBorder)) {
+            System.out.println("too few digits");
+            System.exit(1);
+        }
         System.out.println("u0 = " + initU0);
         Data.Point initPoint = data.points[0];
         initPoint.u = initU0;
@@ -86,25 +93,27 @@ public class Calculation {
             flag = checkCrossing(flag, currentPointIndex);
             if (flag != NoCrossing) {
                 data.lastIndex = currentPointIndex;
+                System.out.println("===== calculation finished ======");
                 return flag;
             }
 
         }
+        System.out.println("===== calculation finished ======");
         System.out.println("end of points");
         return GoesToInfty;
     }
 
     private void calcStep(Data.Point current, Data.Point previous) {
-        double h = 1.0 / N;
-        double k11 = h * f1(previous.teta);
-        double k12 = h * f2(previous.teta);
-        double k13 = h * f3(previous.rho.doubleValue(), previous.u.doubleValue(), Constants.C.doubleValue(), Constants.H_0, previous.teta.doubleValue());
-        double k21 = h * f1(previous.teta.doubleValue() + k13);
-        double k22 = h * f2(previous.teta.doubleValue() + k13);
-        double k23 = h * f3(previous.rho.doubleValue() + k11, previous.u.doubleValue() + k12, Constants.C.doubleValue(), Constants.H_0, previous.teta.doubleValue() + k13);
-        current.rho = previous.rho.add(new Apfloat((k11 + k21) * 0.5));
-        current.u = previous.u.add(new Apfloat((k12 + k22) * 0.5));
-        current.teta = new Apfloat(previous.teta.doubleValue() + (k13 + k23) * 0.5);
+        Apfloat h = new Apfloat(1.0).divide(new Apint(N));
+        Apfloat k11 = h.multiply(f1(previous.teta));
+        Apfloat k12 = h.multiply(f2(previous.teta));
+        Apfloat k13 = h.multiply(f3(previous.rho, previous.u, Constants.C.doubleValue(), Constants.H_0, previous.teta));
+        Apfloat k21 = h.multiply(f1(previous.teta.add(k13)));
+        Apfloat k22 = h.multiply(f2(previous.teta.add(k13)));
+        Apfloat k23 = h.multiply(f3(previous.rho.add(k11), previous.u.add(k12), Constants.C.doubleValue(), Constants.H_0, previous.teta.add(k13)));
+        current.rho = previous.rho.add((k11.add(k21)).divide(new Apfloat(2)));
+        current.u = previous.u.add((k12.add(k22)).divide(new Apfloat(2)));
+        current.teta = previous.teta.add((k13.add(k23)).divide(new Apint(2)));
     }
 
     private CrossingFlag checkCrossing(CrossingFlag previousFlag, int currentPointIndex) {
@@ -191,40 +200,29 @@ public class Calculation {
         return Constants.Ms.doubleValue() * P;
     }
 
-    private static double P(double r, double z, double H0) {
+    private static Apfloat P(double r, double z, double H0) {
         double xi = Constants.xi_inf.doubleValue() * H0;
         double H_nd = H(r, z);
         double pp = log(exp(xi * H_nd) / 2 - exp(-xi * H_nd) / 2) - log(xi * H_nd);
         //printf("P=%f\n",pp);
-        return pp;
+        return new Apfloat(pp);
     }
 
-    private static double f3(double r, double u, double C, double H0, double theta) {
-        double k = -Constants.G.doubleValue() * u + Constants.P1.doubleValue() * P(r, u, H0);
-        double ff;
+    private static Apfloat f3(Apfloat r, Apfloat u, double C, double H0, Apfloat theta) {
+        Apfloat k = (u.multiply(new Apfloat(Constants.G)).negate()).add(new Apfloat(Constants.P1).multiply(P(r.doubleValue(), u.doubleValue(), H0)));
         //printf("-Ah+P=%f,C-Ah+P=%f  ",k,k+C);
-        if (r == 0) {
-            ff = (C + k) * 0.5;
-            return ff;
+        if (abs(r.doubleValue()) < Eps) {
+            return ((k.add(new Apfloat(C))).divide(new Apint(2)));
         }
-        ff = (C + k) - 1.0 * sin(theta) / r;
-        return ff;
+        return k.add(new Apfloat(C)).subtract(ApfloatMath.sin(theta).divide(r));
     }
 
-    private static double f1(double y) {
-        return cos(y);
+    private static Apfloat f1(Apfloat x) {
+        return ApfloatMath.cos(x);
     }
 
-    private static double f1(Apfloat x) {
-        return ApfloatMath.cos(x).doubleValue();
-    }
-
-    private static double f2(double y) {
-        return -sin(y);
-    }
-
-    private static double f2(Apfloat x) {
-        return ApfloatMath.sin(x).negate().doubleValue();
+    private static Apfloat f2(Apfloat x) {
+        return ApfloatMath.sin(x).negate();
     }
 
 }
