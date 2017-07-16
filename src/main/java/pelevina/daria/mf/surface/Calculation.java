@@ -9,41 +9,42 @@ import static pelevina.daria.mf.surface.CrossingFlag.*;
 
 public class Calculation {
 
-    private Apfloat FIVE = new Apfloat(5);
     private Data data;
     private CrossingFlag flag;
-    private double initU0;
-    private double leftBorder;
-    private double rightBorder;
+    private Apfloat initU0;
+    private Apfloat leftBorder;
+    private Apfloat rightBorder;
 
     public Calculation(Data data) {
         this.data = data;
     }
 
-    public void perform() {
-        leftBorder = R.doubleValue();
-        rightBorder = R.multiply(FIVE).doubleValue();
+    public CrossingFlag perform() {
+        leftBorder = new Apfloat(R);
+        rightBorder = new Apfloat(R * 5);
         flag = NoCrossing;
         flag = oneShot();
+        return flag;
     }
 
-    public void next() {
+    public CrossingFlag next() {
         if (shootFinished()) {
             System.out.println("Here must be volume calc...");
-            return;
+            return null;
         }
         flag = oneShot();
+        return flag;
     }
 
     private boolean shootFinished() {
         switch (flag) {
             case WallCrossing:
-                double tetac = data.points[data.lastIndex].teta;
+                double tetac = data.points[data.lastIndex].teta.doubleValue();
                 System.out.println("tetac = " + tetac);
                 System.out.println("alpha = " + Constants.alpha);
-                if (tetac - Constants.alpha.doubleValue()  < -Eps) {
+                if (tetac - Constants.alpha  < -Eps) {
                     rightBorder = initU0;
-                } else if (tetac - Constants.alpha.doubleValue()  > Eps) {
+                } else if (tetac - Constants.alpha  > Eps) {
                     leftBorder = initU0;
                 } else {
                     return true;
@@ -58,7 +59,7 @@ public class Calculation {
                 break;
             case GoesToInfty:
             case NoCrossing:
-                if (data.points[data.lastIndex].u < initU0) {
+                if (data.points[data.lastIndex].u.compareTo(initU0) < 0) {
                     leftBorder = initU0;
                 } else {
                     rightBorder = initU0;
@@ -69,15 +70,15 @@ public class Calculation {
     }
 
     private CrossingFlag oneShot() {
-        initU0 = (leftBorder + rightBorder) / 2;
+        initU0 = leftBorder.add(rightBorder).divide(new Apfloat(2));
         System.out.println("=====================");
         System.out.println("left = " + leftBorder);
         System.out.println("right = " + rightBorder);
         System.out.println("u0 = " + initU0);
         Data.Point initPoint = data.points[0];
         initPoint.u = initU0;
-        initPoint.rho = 0;
-        initPoint.teta = 0;
+        initPoint.rho = Apfloat.ZERO;
+        initPoint.teta = Apfloat.ZERO;
 
         for (int currentPointIndex = 1; currentPointIndex < data.points.length; currentPointIndex++) {
             Data.Point current = data.points[currentPointIndex];
@@ -97,22 +98,22 @@ public class Calculation {
         double h = 1.0 / N;
         double k11 = h * f1(previous.teta);
         double k12 = h * f2(previous.teta);
-        double k13 = h * f3(previous.rho, previous.u, Constants.C.doubleValue(), Constants.H_0, previous.teta);
-        double k21 = h * f1(previous.teta + k13);
-        double k22 = h * f2(previous.teta + k13);
-        double k23 = h * f3(previous.rho + k11, previous.u + k12, Constants.C.doubleValue(), Constants.H_0, previous.teta + k13);
-        current.rho = previous.rho + (k11 + k21) * 0.5;
-        current.u = previous.u + (k12 + k22) * 0.5;
-        current.teta = previous.teta + (k13 + k23) * 0.5;
+        double k13 = h * f3(previous.rho.doubleValue(), previous.u.doubleValue(), Constants.C.doubleValue(), Constants.H_0, previous.teta.doubleValue());
+        double k21 = h * f1(previous.teta.doubleValue() + k13);
+        double k22 = h * f2(previous.teta.doubleValue() + k13);
+        double k23 = h * f3(previous.rho.doubleValue() + k11, previous.u.doubleValue() + k12, Constants.C.doubleValue(), Constants.H_0, previous.teta.doubleValue() + k13);
+        current.rho = previous.rho.add(new Apfloat((k11 + k21) * 0.5));
+        current.u = previous.u.add(new Apfloat((k12 + k22) * 0.5));
+        current.teta = new Apfloat(previous.teta.doubleValue() + (k13 + k23) * 0.5);
     }
 
     private CrossingFlag checkCrossing(CrossingFlag previousFlag, int currentPointIndex) {
         Data.Point current = data.points[currentPointIndex];
         CrossingFlag flag = NoCrossing;
         // CHECKING CROSS //
-        if ((current.rho < 0) && (current.u < initU0))
+        if ((current.rho.compareTo(Apfloat.ZERO) < 0) && (current.u.compareTo(initU0) < 0))
             flag = ClockWise;
-        if ((current.rho < 0) && (current.u > initU0))
+        if ((current.rho.compareTo(Apfloat.ZERO) < 0) && (current.u.compareTo(initU0) > 0))
             flag = CounterClockWise;
         if (currentPointIndex > 2) {
             CrossingFlag crtmp = cross(currentPointIndex);
@@ -125,14 +126,14 @@ public class Calculation {
             else if (crtmp != NoCrossing)
                 flag = crtmp;
         }
-        if (current.u < -Constants.R.doubleValue()) {
+        if (current.u.compareTo(new Apfloat(-Constants.R)) < 0) {
             flag = BottomCrossing;
         }
-        if (current.rho > Constants.CONTAINER_RADIUS) {
+        if (current.rho.compareTo(new Apfloat(Constants.CONTAINER_RADIUS)) > 0) {
             flag = WallCrossing;
         }
 
-        if (pow(current.rho, 2) + pow(current.u, 2) < ApfloatMath.pow(R, 2).doubleValue()) {
+        if (pow(current.rho.doubleValue(), 2) + pow(current.u.doubleValue(), 2) < pow(R, 2)) {
             System.out.println(current);
             flag = SphereCrossing;
         }
@@ -147,12 +148,12 @@ public class Calculation {
             Data.Point prevLast = data.points[currentPointIndex - 1];
             Data.Point current = data.points[j];
             Data.Point prevCurrent = data.points[j - 1];
-            double f1 = (current.rho - prevLast.rho) / (last.rho - prevLast.rho) - (current.u - prevLast.u) / (last.u - prevLast.u);
-            double f2 = (prevCurrent.rho - prevLast.rho) / (last.rho - prevLast.rho) - (prevCurrent.u - prevLast.u) / (last.u - prevLast.u);
-            double g1 = (last.rho - prevCurrent.rho) / (current.rho - prevCurrent.rho) - (last.u - prevCurrent.u) / (current.u - prevCurrent.u);
-            double g2 = (prevLast.rho - prevCurrent.rho) / (current.rho - prevCurrent.rho) - (prevLast.u - prevCurrent.u) / (current.u - prevCurrent.u);
-            double k = (current.rho - last.rho) * (prevLast.u - current.u) - (current.u - last.u) * (prevLast.rho - current.rho);
-            if ((f1 * f2 < 0) && (g2 * g1 < 0)) {
+            Apfloat f1 = crossingDiff(current, last, prevLast);
+            Apfloat f2 = crossingDiff(prevCurrent, last, prevLast);
+            Apfloat g1 = crossingDiff(last, current, prevCurrent);
+            Apfloat g2 = crossingDiff(prevLast, current, prevCurrent);
+            if ((f1.multiply(f2).compareTo(Apfloat.ZERO) < 0) && (g2.multiply(g1).compareTo(Apfloat.ZERO) < 0)) {
+                double k = (current.rho.subtract(last.rho).doubleValue()) * (prevLast.u.subtract(current.u).doubleValue()) - (current.u.subtract(last.u).doubleValue()) * (prevLast.rho.subtract(current.rho).doubleValue());
                 if (k > 0) return CounterClockWise;
                 if (k < 0) return ClockWise;
             }
@@ -160,8 +161,15 @@ public class Calculation {
         return NoCrossing;
     }
 
+    private Apfloat crossingDiff(Data.Point first, Data.Point second, Data.Point base) {
+        return (
+                (first.rho.subtract(base.rho).divide(second.rho.subtract(base.rho)))
+                .subtract((first.u.subtract(base.u).divide(second.u.subtract(base.u))))
+        );
+    }
+
     private static double H(double r, double z) {
-        double A = - ApfloatMath.pow(R, 3).doubleValue();
+        double A = - pow(R, 3);
         double z2 = z * z;
         double r2 = r * r;
         double sum = z2 + r2;
@@ -207,16 +215,16 @@ public class Calculation {
         return cos(y);
     }
 
-    private static Apfloat f1(Apfloat x) {
-        return ApfloatMath.cos(x);
+    private static double f1(Apfloat x) {
+        return ApfloatMath.cos(x).doubleValue();
     }
 
     private static double f2(double y) {
         return -sin(y);
     }
 
-    private static Apfloat f2(Apfloat x) {
-        return ApfloatMath.sin(x).negate();
+    private static double f2(Apfloat x) {
+        return ApfloatMath.sin(x).negate().doubleValue();
     }
 
 }

@@ -8,9 +8,12 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
-public class WindowMain extends Application {
+import java.util.EnumSet;
+import java.util.concurrent.TimeUnit;
 
-    private static double R = Constants.R.doubleValue();
+import static pelevina.daria.mf.surface.Constants.R;
+
+public class WindowMain extends Application {
 
     private final Data data;
     private final Calculation calculation;
@@ -41,23 +44,23 @@ public class WindowMain extends Application {
         primaryStage.setScene(scene);
         scene.setOnKeyPressed(event -> {
             switch (event.getCode()) {
-                case UP:
-                    drawContainer();
-                    break;
-//                    case DOWN:  goSouth = true; break;
-//                    case LEFT:  goWest  = true; break;
-//                    case RIGHT: goEast  = true; break;
                 case SPACE:
                     drawContainer();
-                    calculation.next();
+                    CrossingFlag flag = calculation.next();
                     drawSurface();
                     break;
             }
         });
         primaryStage.show();
         drawContainer();
-        calculation.perform();
+        CrossingFlag flag = calculation.perform();
         drawSurface();
+//        while (CrossingFlag.CONTINUE.contains(flag)) {
+//            flag = calculation.next();
+//            drawContainer();
+//            drawSurface();
+//        }
+
     }
 
     private double getScaledLength(double length) {

@@ -1,6 +1,8 @@
 package pelevina.daria.mf.surface;
 
 
+import org.apfloat.Apfloat;
+
 public class Data {
 
     final Point[] points;
@@ -15,20 +17,20 @@ public class Data {
     }
 
     public static class Point {
-        double rho;
-        double u;
-        double teta;
+        Apfloat rho;
+        Apfloat u;
+        Apfloat teta;
 
         double getX() {
-            return rho;
+            return rho.doubleValue();
         }
 
         double getY() {
-            return u;
+            return u.doubleValue();
         }
 
         double getAngle() {
-            return teta;
+            return teta.doubleValue();
         }
 
         @Override
