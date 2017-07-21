@@ -1,5 +1,6 @@
 package pelevina.daria.mf.surface;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -9,7 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import java.util.EnumSet;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static pelevina.daria.mf.surface.Constants.R;
 
@@ -21,6 +22,18 @@ public class WindowMain extends Application {
     private GraphicsContext gc;
     private double padding = 100;
     private double scale = 1300;
+    private CrossingFlag flag;
+    protected AnimationTimer at = new AnimationTimer() {
+        @Override
+        public void handle(long now) {
+            flag = calculation.next();
+            drawContainer();
+            drawSurface();
+            if (!CrossingFlag.CONTINUE.contains(flag)) {
+                at.stop();
+            }
+        }
+    };
 
     public static void main(String[] args) {
         Application.launch(args);
@@ -45,21 +58,15 @@ public class WindowMain extends Application {
         scene.setOnKeyPressed(event -> {
             switch (event.getCode()) {
                 case SPACE:
-                    drawContainer();
-                    CrossingFlag flag = calculation.next();
-                    drawSurface();
+                    at.start();
                     break;
             }
         });
         primaryStage.show();
+        flag = calculation.perform();
         drawContainer();
-        CrossingFlag flag = calculation.perform();
         drawSurface();
-//        while (CrossingFlag.CONTINUE.contains(flag)) {
-//            flag = calculation.next();
-//            drawContainer();
-//            drawSurface();
-//        }
+
 
     }
 
@@ -94,9 +101,9 @@ public class WindowMain extends Application {
             Data.Point current = data.points[j];
             Data.Point previous = data.points[j - 1];
             gc.strokeLine(getX(previous.getX()), getY(previous.getY()), getX(current.getX()), getY(current.getY()));
-            gc.fillOval(getX(previous.getX())-1, getY(previous.getY())-1, 2, 2);
-            if(j == data.lastIndex) {
-                gc.fillOval(getX(current.getX())-1, getY(current.getY())-1, 2, 2);
+            gc.fillOval(getX(previous.getX()) - 1, getY(previous.getY()) - 1, 2, 2);
+            if (j == data.lastIndex) {
+                gc.fillOval(getX(current.getX()) - 1, getY(current.getY()) - 1, 2, 2);
             }
         }
         gc.setLineWidth(1);
