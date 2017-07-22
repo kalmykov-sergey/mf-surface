@@ -16,28 +16,29 @@ import static pelevina.daria.mf.surface.Constants.R;
 
 public class WindowMain extends Application {
 
+    private double padding = 100;
+    private double scale = 900;
+    public static void main(String[] args) {
+        Application.launch(args);
+    }
+
     private final Data data;
     private final Calculation calculation;
     private Canvas canvas;
     private GraphicsContext gc;
-    private double padding = 100;
-    private double scale = 1300;
-    private CrossingFlag flag;
+
+
     protected AnimationTimer at = new AnimationTimer() {
         @Override
         public void handle(long now) {
-            flag = calculation.next();
+            calculation.next();
             drawContainer();
             drawSurface();
-            if (!CrossingFlag.CONTINUE.contains(flag)) {
+            if (calculation.pause()) {
                 at.stop();
             }
         }
     };
-
-    public static void main(String[] args) {
-        Application.launch(args);
-    }
 
     public WindowMain() {
         data = new Data(4 * Constants.N);
@@ -63,11 +64,7 @@ public class WindowMain extends Application {
             }
         });
         primaryStage.show();
-        flag = calculation.perform();
-        drawContainer();
-        drawSurface();
-
-
+        at.start();
     }
 
     private double getScaledLength(double length) {

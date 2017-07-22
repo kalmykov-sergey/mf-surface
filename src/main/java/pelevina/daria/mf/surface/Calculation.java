@@ -9,8 +9,6 @@ import static pelevina.daria.mf.surface.Constants.*;
 import static pelevina.daria.mf.surface.CrossingFlag.*;
 
 public class Calculation {
-
-    public static final int PRECISION = 16;
     private Data data;
     private CrossingFlag flag;
     private Apfloat initU0;
@@ -19,23 +17,31 @@ public class Calculation {
 
     public Calculation(Data data) {
         this.data = data;
-    }
-
-    public CrossingFlag perform() {
-        leftBorder = new Apfloat(Constants.left, PRECISION);
-        rightBorder = new Apfloat(Constants.right, PRECISION);
+        leftBorder = new Apfloat(Constants.left);
+        rightBorder = new Apfloat(Constants.right);
         flag = NoCrossing;
-        flag = oneShot();
-        return flag;
     }
 
-    public CrossingFlag next() {
+    public void perform() {
+
+        flag = oneShot();
+    }
+
+    public void next() {
         flag = oneShot();
         if (shootFinished()) {
             System.out.println("Here must be volume calc...");
-            return null;
+            volumeCalculate();
+            System.exit(0);
         }
-        return flag;
+    }
+
+    public boolean pause() {
+        boolean pause = !CrossingFlag.CONTINUE.contains(flag);
+        if (pause) {
+            System.out.println("\n ==== PAUSE ==== \n");
+        }
+        return pause;
     }
 
     private boolean shootFinished() {
@@ -44,9 +50,9 @@ public class Calculation {
                 double tetac = data.points[data.lastIndex].teta.doubleValue();
                 System.out.println("tetac = " + tetac);
                 System.out.println("alpha = " + Constants.alpha);
-                if (tetac - Constants.alpha  < -Eps) {
+                if (tetac - Constants.alpha < -Eps) {
                     rightBorder = initU0;
-                } else if (tetac - Constants.alpha  > Eps) {
+                } else if (tetac - Constants.alpha > Eps) {
                     leftBorder = initU0;
                 } else {
                     return true;
@@ -72,12 +78,54 @@ public class Calculation {
         return false;
     }
 
+    private void volumeCalculate() {
+        double tetac = data.points[data.lastIndex].teta.doubleValue();
+        System.out.println("Quitting: TETAsm=" + tetac);
+        System.out.println(String.format("h0=%f, C=%f\n", initU0.doubleValue(), C.doubleValue()));
+
+        // CALCULATIG OF THE VOLUME //
+
+        double Vol = getVolume();
+
+        Data.Point touch = getTouchPoint();
+        // System.out.println(String.format("free_mag_energy=%f; gravity energy=%f; surftension energy=%f\n",fme, fge, fse);
+        System.out.println(String.format("V0l=%f, rho0=%f\n", Vol, touch.rho.doubleValue()));
+        for (int i = 0; i < data.lastIndex; i++) {
+            Data.Point current = data.points[i];
+            System.out.println(String.format("[%f,%f], ", current.rho.doubleValue(), current.u.doubleValue()));
+        }
+    }
+
+    private Data.Point getTouchPoint() {
+        Data.Point touch = data.points[0];
+        double delta = 1;
+        for (int i = 0; i < data.lastIndex + 1; i++) {
+            Data.Point current = data.points[i];
+            if (current.R2() - R * R < delta) {
+                delta = current.R2() - R * R;
+                touch = current;
+            }
+        }
+        return touch;
+    }
+
+    private double getVolume() {
+        double vol = 0;
+        for (int i = 1; i < data.lastIndex; i++) {
+            Data.Point current = data.points[i];
+            Data.Point previous = data.points[i - 1];
+            vol = vol + 0.5 * Math.PI * (previous.u.doubleValue() + R + current.u.doubleValue() + R) * (pow(current.rho.doubleValue(), 2) - pow(previous.rho.doubleValue(), 2));
+        }
+        vol = vol - 4 * Math.PI * R * R * R / 3;
+        return vol;
+    }
+
     private CrossingFlag oneShot() {
         initU0 = leftBorder.add(rightBorder).divide(new Apfloat(2));
         System.out.println("==== calculation started ======");
         System.out.println("left = " + leftBorder);
         System.out.println("right = " + rightBorder);
-        if(leftBorder.equals(rightBorder)) {
+        if (leftBorder.equals(rightBorder)) {
             System.out.println("too few digits");
             System.exit(1);
         }
@@ -90,7 +138,7 @@ public class Calculation {
         for (int currentPointIndex = 1; currentPointIndex < data.points.length; currentPointIndex++) {
             Data.Point current = data.points[currentPointIndex];
             calcStep(data.points[currentPointIndex], data.points[currentPointIndex - 1]);
-            flag = checkCrossing(flag, currentPointIndex);
+            flag = checkCrossing(currentPointIndex);
             if (flag != NoCrossing) {
                 data.lastIndex = currentPointIndex;
                 System.out.println("===== calculation finished ======");
@@ -116,7 +164,7 @@ public class Calculation {
         current.teta = previous.teta.add((k13.add(k23)).divide(new Apint(2)));
     }
 
-    private CrossingFlag checkCrossing(CrossingFlag previousFlag, int currentPointIndex) {
+    private CrossingFlag checkCrossing(int currentPointIndex) {
         Data.Point current = data.points[currentPointIndex];
         CrossingFlag flag = NoCrossing;
         // CHECKING CROSS //
@@ -173,12 +221,12 @@ public class Calculation {
     private Apfloat crossingDiff(Data.Point first, Data.Point second, Data.Point base) {
         return (
                 (first.rho.subtract(base.rho).divide(second.rho.subtract(base.rho)))
-                .subtract((first.u.subtract(base.u).divide(second.u.subtract(base.u))))
+                        .subtract((first.u.subtract(base.u).divide(second.u.subtract(base.u))))
         );
     }
 
     private static double H(double r, double z) {
-        double A = - pow(R, 3);
+        double A = -pow(R, 3);
         double z2 = z * z;
         double r2 = r * r;
         double sum = z2 + r2;
