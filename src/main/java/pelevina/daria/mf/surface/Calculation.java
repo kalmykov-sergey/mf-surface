@@ -30,7 +30,7 @@ public class Calculation {
     public void next() {
         flag = oneShot();
         if (shootFinished()) {
-            System.out.println("Here must be volume calc...");
+            System.out.println("Here must be volume calc.??..");
             volumeCalculate();
             System.exit(0);
         }
