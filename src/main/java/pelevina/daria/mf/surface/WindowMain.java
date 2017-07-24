@@ -17,7 +17,7 @@ import static pelevina.daria.mf.surface.Constants.R;
 public class WindowMain extends Application {
 
     private double padding = 100;
-    private double scale = 900;
+    private double scale = 400;
     public static void main(String[] args) {
         Application.launch(args);
     }
