@@ -41,7 +41,8 @@ public class Calculation {
         if (pause) {
             System.out.println("\n ==== PAUSE ==== \n");
         }
-        return pause;
+        return false;
+        //return pause;
     }
 
     private boolean shootFinished() {
@@ -92,7 +93,11 @@ public class Calculation {
         System.out.println(String.format("V0l=%f, rho0=%f\n", Vol, touch.rho.doubleValue()));
         for (int i = 0; i < data.lastIndex; i++) {
             Data.Point current = data.points[i];
-            System.out.println(String.format("[%f,%f], ", current.rho.doubleValue(), current.u.doubleValue()));
+            System.out.println("["
+                    + String.valueOf(current.rho.doubleValue()).replace(',', '.')
+                    + ", "
+                    + String.valueOf(current.u.doubleValue()).replace(',', '.')
+                    + "], ");
         }
     }
 
@@ -114,9 +119,9 @@ public class Calculation {
         for (int i = 1; i < data.lastIndex; i++) {
             Data.Point current = data.points[i];
             Data.Point previous = data.points[i - 1];
-            vol = vol + 0.5 * Math.PI * (previous.u.doubleValue() + R + current.u.doubleValue() + R) * (pow(current.rho.doubleValue(), 2) - pow(previous.rho.doubleValue(), 2));
+            vol = vol + 0.5 * Math.PI * (previous.u.doubleValue()  + current.u.doubleValue() ) * (pow(current.rho.doubleValue(), 2) - pow(previous.rho.doubleValue(), 2));
         }
-        vol = vol - 4 * Math.PI * R * R * R / 3;
+        //vol = vol - 4 * Math.PI * R * R * R / 3;
         return vol;
     }
 
